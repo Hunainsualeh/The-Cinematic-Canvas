@@ -76,36 +76,45 @@
         return;
       }
 
-      await Clerk.load();
+      try {
+        await Clerk.load();
 
-      const app = document.getElementById('app');
+        // 👇 Handles the redirect from Google (OAuth) cleanly
+        if (window.location.href.includes('__clerk_status')) {
+          await Clerk.handleRedirectCallback();
+          // Redirect to auth.html again without the Clerk URL hash
+          window.history.replaceState({}, document.title, 'auth.html');
+        }
 
-      // 👇 Required on GitHub Pages to complete the OAuth flow (prevents 404)
-      await Clerk.handleRedirectCallback();
+        const app = document.getElementById('app');
 
-      if (Clerk.user) {
-        // ✅ Signed in
-        app.innerHTML = `
-          <div id="user-button"></div>
-          <button id="sign-out">Sign Out</button>
-        `;
-        Clerk.mountUserButton(document.getElementById('user-button'));
+        if (Clerk.user) {
+          app.innerHTML = `
+            <div id="user-button"></div>
+            <button id="sign-out">Sign Out</button>
+          `;
+          Clerk.mountUserButton(document.getElementById('user-button'));
 
-        document.getElementById('sign-out').onclick = async () => {
-          await Clerk.signOut();
-          window.location.href = 'auth.html'; // reload to show sign-in
-        };
+          document.getElementById('sign-out').onclick = async () => {
+            await Clerk.signOut();
+            window.location.href = 'auth.html';
+          };
 
-        // 🔁 redirect to wall.html after sign-in
-        setTimeout(() => {
-          window.location.href = 'wall.html';
-        }, 1000);
-      } else {
-        // Not signed in → Show Sign In box
-        app.innerHTML = `<div id="sign-in"></div>`;
-        Clerk.mountSignIn(document.getElementById('sign-in'), {
-          redirectUrl: 'auth.html', // 👈 Always redirect back to this page
-        });
+          // Manual redirect after 1 sec
+          setTimeout(() => {
+            window.location.href = 'wall.html';
+          }, 1000);
+
+        } else {
+          app.innerHTML = `<div id="sign-in"></div>`;
+          Clerk.mountSignIn(document.getElementById('sign-in'), {
+            // This is KEY: we redirect back to this exact file!
+            redirectUrl: window.location.href
+          });
+        }
+      } catch (err) {
+        console.error('Clerk Auth Error:', err);
+        document.getElementById('app').innerHTML = 'Authentication failed. Please reload.';
       }
     });
   </script>
