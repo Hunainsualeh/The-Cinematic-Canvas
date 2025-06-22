@@ -5,36 +5,36 @@
   <title>Cinematic Canvas – Auth</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin:0; padding:0; box-sizing:border-box }
     body {
-      display: flex; justify-content: center; align-items: center;
-      height: 100vh; background: #000; color: #fff;
-      font-family: 'Segoe UI', sans-serif;
+      display:flex; align-items:center; justify-content:center;
+      height:100vh; background:#000; color:#fff;
+      font-family:'Segoe UI', sans-serif;
     }
     .auth-container {
-      width: 90%; max-width: 400px; padding: 2rem;
-      background: rgba(255,255,255,0.05); backdrop-filter: blur(20px);
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.8);
-      display: flex; flex-direction: column; align-items: center; gap: 1rem;
+      width:90%; max-width:400px; padding:2rem;
+      background:rgba(255,255,255,0.05); backdrop-filter:blur(20px);
+      border:1px solid rgba(255,255,255,0.1); border-radius:16px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.8);
+      display:flex; flex-direction:column; align-items:center; gap:1rem;
     }
     .cl-signInBox, .cl-userButtonBox {
-      width: 100% !important;
-      background: rgba(255,255,255,0.08) !important;
-      backdrop-filter: blur(12px) !important;
-      border: 1px solid rgba(255,255,255,0.12) !important;
-      border-radius: 12px !important;
+      width:100% !important;
+      background:rgba(255,255,255,0.08) !important;
+      backdrop-filter:blur(12px) !important;
+      border:1px solid rgba(255,255,255,0.12) !important;
+      border-radius:12px !important;
     }
-    .cl-signInBox > div, .cl-userButtonBox > div { padding: 1rem !important; }
+    .cl-signInBox > div, .cl-userButtonBox > div {
+      padding:1rem !important;
+    }
     #sign-out {
-      margin-top: 1rem; padding: 0.75rem 1.5rem;
-      background: rgba(255,255,255,0.1); border: none; border-radius: 8px;
-      cursor: pointer; color: #fff; transition: background 0.2s;
+      margin-top:1rem; padding:0.75rem 1.5rem;
+      background:rgba(255,255,255,0.1); border:none; border-radius:8px;
+      cursor:pointer; transition:background .2s; color:#fff;
     }
-    #sign-out:hover { background: rgba(255,255,255,0.2); }
+    #sign-out:hover { background:rgba(255,255,255,0.2); }
   </style>
-
-  <!-- ClerkJS SDK -->
   <script
     async
     crossorigin="anonymous"
@@ -43,44 +43,41 @@
   </script>
 </head>
 <body>
-  <div id="app" class="auth-container">Loading...</div>
+  <div id="app" class="auth-container">Loading…</div>
 
   <script>
     (async () => {
       if (typeof Clerk === 'undefined') {
-        document.getElementById('app').textContent = 'Clerk failed to load.';
+        document.getElementById('app').textContent = 'Error loading Clerk.';
         return;
       }
       await Clerk.load();
 
-      // Handle OAuth callback (prevents default redirect)
-      if (window.location.search.includes('__clerk_status')) {
-        await Clerk.handleRedirectCallback();
+      const url = new URL(window.location.href);
+      // handle both handshake and status callbacks
+      if (url.searchParams.has('__clerk_handshake') || url.searchParams.has('__clerk_status')) {
+        try {
+          await Clerk.handleRedirectCallback();
+        } catch (e) {
+          console.error('Callback error', e);
+        }
         // clean URL
-        window.history.replaceState({}, '', 'auth.html');
+        url.searchParams.delete('__clerk_handshake');
+        url.searchParams.delete('__clerk_status');
+        window.history.replaceState({}, '', url.pathname);
       }
 
       const app = document.getElementById('app');
       if (Clerk.user) {
-        // Signed in
-        app.innerHTML = `
-          <div id="user-button"></div>
-          <button id="sign-out">Sign Out</button>
-        `;
-        Clerk.mountUserButton(document.getElementById('user-button'));
-        document.getElementById('sign-out').onclick = async () => {
-          await Clerk.signOut();
-          window.location.href = 'auth.html';
-        };
-        // Redirect to wall.html on your GitHub Pages site
+        // already signed in → go to wall.html
+        app.innerHTML = `<p>Signed in! Redirecting…</p>`;
         setTimeout(() => {
           window.location.href = 'https://hunainsualeh.github.io/The-Cinematic-Canvas/wall.html';
-        }, 500);
+        }, 200);
       } else {
-        // Not signed in
+        // show sign-in form
         app.innerHTML = `<div id="sign-in"></div>`;
         Clerk.mountSignIn(document.getElementById('sign-in'), {
-          // always bounce back here after OAuth
           redirectUrl: 'https://hunainsualeh.github.io/The-Cinematic-Canvas/auth.html',
           afterSignInUrl: 'https://hunainsualeh.github.io/The-Cinematic-Canvas/wall.html',
           afterSignUpUrl: 'https://hunainsualeh.github.io/The-Cinematic-Canvas/wall.html'
