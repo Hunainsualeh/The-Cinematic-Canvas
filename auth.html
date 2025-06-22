@@ -5,75 +5,138 @@
   <title>Cinematic Canvas – Auth</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
     body {
-      display:flex; align-items:center; justify-content:center;
-      min-height:100vh; background:#000; color:#fff;
-      font-family:'Segoe UI', sans-serif;
+      height: 100vh;
+      background-color: #000;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
     }
     .auth-container {
-      width:90%; max-width:400px; padding:2rem;
-      background:rgba(255,255,255,0.05); backdrop-filter:blur(20px);
-      border:1px solid rgba(255,255,255,0.1); border-radius:16px;
-      box-shadow:0 8px 32px rgba(0,0,0,0.8);
-      display:flex; flex-direction:column; align-items:center; gap:1rem;
+      width: 90%;
+      max-width: 400px;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
     }
-    /* Clerk widget overrides */
-    .cl-signIn, .cl-userButton {
-      width:100% !important;
+    .cl-signInBox,
+    .cl-userButtonBox {
+      width: 100% !important;
+      background: rgba(255, 255, 255, 0.08) !important;
+      backdrop-filter: blur(12px) !important;
+      border-radius: 12px !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    }
+    .cl-signInBox > div,
+    .cl-userButtonBox > div {
+      padding: 1rem !important;
+    }
+    #sign-out {
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      color: #fff;
+      transition: background 0.2s ease;
+    }
+    #sign-out:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .error-message {
+      color: #ff6b6b;
+      padding: 1rem;
+      text-align: center;
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      border-radius: 8px;
+      background: rgba(255, 107, 107, 0.1);
+      width: 100%;
     }
   </style>
 
-  <!-- ClerkJS SDK -->
   <script
     async
+    type="text/javascript"
+    crossorigin="anonymous"
     src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
-    data-clerk-publishable-key="pk_test_ZHJpdmVuLXRlYWwtNjMuY2xlcmsuYWNjb3VudHMuZGV2JA"
-  ></script>
+    data-clerk-publishable-key="pk_test_ZHJpdmVuLXRlYWwtNjMuY2xlcmsuYWNjb3VudHMuZGV2JA">
+  </script>
 </head>
 <body>
-  <div id="auth" class="auth-container">
-    <p>Loading…</p>
-  </div>
+  <div id="app" class="auth-container"></div>
 
   <script>
-    (async () => {
-      const container = document.getElementById('auth');
-
-      // Wait for Clerk to be available
+    window.addEventListener('load', async () => {
+      const app = document.getElementById('app');
+      
+      // Handle Clerk initialization errors
       if (typeof Clerk === 'undefined') {
-        container.innerHTML = '<p style="color:#f55">Error loading authentication library.</p>';
+        app.innerHTML = `
+          <div class="error-message">
+            <h3>Error Loading Clerk</h3>
+            <p>Failed to load authentication service. Please refresh or check your connection.</p>
+          </div>
+        `;
         return;
       }
-      await Clerk.load();
 
-      // Handle OAuth callback params and clean URL
-      const url = new URL(window.location);
-      if (url.searchParams.has('__clerk_handshake') || url.searchParams.has('__clerk_status')) {
-        try {
+      try {
+        // Initialize Clerk
+        await Clerk.load();
+        
+        // Handle redirect callback if returning from authentication
+        const handshakePresent = window.location.search.includes('__clerk_handshake');
+        if (handshakePresent) {
           await Clerk.handleRedirectCallback();
-        } catch (err) {
-          console.error('Clerk callback failed', err);
+          // Clean URL parameters after handling handshake
+          window.history.replaceState({}, document.title, window.location.pathname);
         }
-        url.searchParams.delete('__clerk_handshake');
-        url.searchParams.delete('__clerk_status');
-        history.replaceState({}, '', url.pathname);
-      }
 
-      // If already signed in, redirect at once
-      if (Clerk.user) {
-        container.innerHTML = '<p>Signed in! Redirecting…</p>';
-        return void (window.location.href = './Wall.html');
+        if (Clerk.user) {
+          // User is authenticated - redirect to Wall.html
+          window.location.href = 'Wall.html';
+        } else {
+          // Show sign-in form with proper redirect configuration
+          app.innerHTML = '<div id="sign-in"></div>';
+          Clerk.mountSignIn(document.getElementById('sign-in'), {
+            afterSignInUrl: 'Wall.html',
+            afterSignUpUrl: 'Wall.html',
+            signInForceRedirectUrl: 'Wall.html'
+          });
+        }
+      } catch (error) {
+        console.error('Clerk Error:', error);
+        app.innerHTML = `
+          <div class="error-message">
+            <h3>Authentication Error</h3>
+            <p>${error.message || 'Please try again or contact support'}</p>
+            <button onclick="window.location.reload()" style="margin-top:10px;padding:8px 16px;">Retry</button>
+          </div>
+        `;
       }
+    });
 
-      // Otherwise, mount the sign-in form
-      container.innerHTML = '<div id="sign-in"></div>';
-      Clerk.mountSignIn(document.getElementById('sign-in'), {
-        redirectUrl: window.location.origin + window.location.pathname,
-        afterSignInUrl: './Wall.html',
-        afterSignUpUrl: './Wall.html'
-      });
-    })();
+    // Global sign-out function for other pages
+    window.signOut = async () => {
+      await Clerk.signOut();
+      window.location.href = window.location.origin + window.location.pathname;
+    };
   </script>
 </body>
 </html>
