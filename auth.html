@@ -5,10 +5,10 @@
   <title>Cinematic Canvas – Auth</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * { margin:0; padding:0; box-sizing:border-box }
+    * { margin:0; padding:0; box-sizing:border-box; }
     body {
       display:flex; align-items:center; justify-content:center;
-      height:100vh; background:#000; color:#fff;
+      min-height:100vh; background:#000; color:#fff;
       font-family:'Segoe UI', sans-serif;
     }
     .auth-container {
@@ -18,80 +18,61 @@
       box-shadow:0 8px 32px rgba(0,0,0,0.8);
       display:flex; flex-direction:column; align-items:center; gap:1rem;
     }
-    .cl-signInBox, .cl-userButtonBox {
+    /* Clerk widget overrides */
+    .cl-signIn, .cl-userButton {
       width:100% !important;
-      background:rgba(255,255,255,0.08) !important;
-      backdrop-filter:blur(12px) !important;
-      border:1px solid rgba(255,255,255,0.12) !important;
-      border-radius:12px !important;
     }
-    .cl-signInBox > div, .cl-userButtonBox > div {
-      padding:1rem !important;
-    }
-    #sign-out {
-      margin-top:1rem; padding:0.75rem 1.5rem;
-      background:rgba(255,255,255,0.1); border:none; border-radius:8px;
-      cursor:pointer; transition:background .2s; color:#fff;
-    }
-    #sign-out:hover { background:rgba(255,255,255,0.2); }
   </style>
 
   <!-- ClerkJS SDK -->
   <script
-    async crossorigin="anonymous"
+    async
     src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
-    data-clerk-publishable-key="pk_test_ZHJpdmVuLXRlYWwtNjMuY2xlcmsuYWNjb3VudHMuZGV2JA">
-  </script>
+    data-clerk-publishable-key="pk_test_ZHJpdmVuLXRlYWwtNjMuY2xlcmsuYWNjb3VudHMuZGV2JA"
+  ></script>
 </head>
 <body>
-  <div id="app" class="auth-container">Loading…</div>
+  <div id="auth" class="auth-container">
+    <p>Loading…</p>
+  </div>
 
   <script>
     (async () => {
+      const container = document.getElementById('auth');
+
+      // Wait for Clerk to be available
       if (typeof Clerk === 'undefined') {
-        document.getElementById('app').textContent = 'Error loading Clerk.';
+        container.innerHTML = '<p style="color:#f55">Error loading authentication library.</p>';
         return;
       }
       await Clerk.load();
 
-      const url = new URL(window.location.href);
-
-      // 1) Handle OAuth callbacks from Clerk
+      // Handle OAuth callback params and clean URL
+      const url = new URL(window.location);
       if (url.searchParams.has('__clerk_handshake') || url.searchParams.has('__clerk_status')) {
         try {
           await Clerk.handleRedirectCallback();
         } catch (err) {
-          console.error('Clerk callback error', err);
+          console.error('Clerk callback failed', err);
         }
-        // Remove query params
         url.searchParams.delete('__clerk_handshake');
         url.searchParams.delete('__clerk_status');
-        window.history.replaceState({}, '', url.pathname);
+        history.replaceState({}, '', url.pathname);
       }
 
-      const app = document.getElementById('app');
-
+      // If already signed in, redirect at once
       if (Clerk.user) {
-        // 2) If signed in, go straight to YOUR Wall.html
-        app.innerHTML = '<p>Signed in! Redirecting…</p>';
-        setTimeout(() => {
-          window.location.href = 'Wall.html';
-        }, 200);
-        return;
+        container.innerHTML = '<p>Signed in! Redirecting…</p>';
+        return void (window.location.href = './Wall.html');
       }
 
-      // 3) Otherwise, render the sign-in form
-      app.innerHTML = '<div id="sign-in"></div>';
-      Clerk.mountSignIn(
-        document.getElementById('sign-in'),
-        {
-          // must exactly match this GitHub Pages URL for auth.html
-          redirectUrl: 'https://hunainsualeh.github.io/The-Cinematic-Canvas/auth.html',
-          // after login or signup, send to the capital-W Wall.html
-          afterSignInUrl: 'Wall.html',
-          afterSignUpUrl: 'Wall.html'
-        }
-      );
+      // Otherwise, mount the sign-in form
+      container.innerHTML = '<div id="sign-in"></div>';
+      Clerk.mountSignIn(document.getElementById('sign-in'), {
+        redirectUrl: window.location.origin + window.location.pathname,
+        afterSignInUrl: './Wall.html',
+        afterSignUpUrl: './Wall.html'
+      });
     })();
   </script>
 </body>
