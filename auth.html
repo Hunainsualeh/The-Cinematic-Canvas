@@ -7,116 +7,86 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      height: 100vh;
-      background-color: #000;
+      display: flex; justify-content: center; align-items: center;
+      height: 100vh; background: #000; color: #fff;
       font-family: 'Segoe UI', sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: #fff;
     }
     .auth-container {
-      width: 90%;
-      max-width: 400px;
-      padding: 2rem;
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1rem;
+      width: 90%; max-width: 400px; padding: 2rem;
+      background: rgba(255,255,255,0.05); backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+      display: flex; flex-direction: column; align-items: center; gap: 1rem;
     }
-    .cl-signInBox,
-    .cl-userButtonBox {
+    .cl-signInBox, .cl-userButtonBox {
       width: 100% !important;
-      background: rgba(255, 255, 255, 0.08) !important;
+      background: rgba(255,255,255,0.08) !important;
       backdrop-filter: blur(12px) !important;
+      border: 1px solid rgba(255,255,255,0.12) !important;
       border-radius: 12px !important;
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
     }
-    .cl-signInBox > div,
-    .cl-userButtonBox > div {
-      padding: 1rem !important;
-    }
+    .cl-signInBox > div, .cl-userButtonBox > div { padding: 1rem !important; }
     #sign-out {
-      margin-top: 1rem;
-      padding: 0.75rem 1.5rem;
-      background: rgba(255,255,255,0.1);
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 1rem;
-      color: #fff;
-      transition: background 0.2s ease;
+      margin-top: 1rem; padding: 0.75rem 1.5rem;
+      background: rgba(255,255,255,0.1); border: none; border-radius: 8px;
+      cursor: pointer; color: #fff; transition: background 0.2s;
     }
-    #sign-out:hover {
-      background: rgba(255,255,255,0.2);
-    }
+    #sign-out:hover { background: rgba(255,255,255,0.2); }
   </style>
 
   <!-- ClerkJS SDK -->
   <script
     async
-    type="text/javascript"
     crossorigin="anonymous"
     src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
     data-clerk-publishable-key="pk_test_ZHJpdmVuLXRlYWwtNjMuY2xlcmsuYWNjb3VudHMuZGV2JA">
   </script>
 </head>
 <body>
-  <div id="app" class="auth-container">Loading authentication...</div>
+  <div id="app" class="auth-container">Loading...</div>
 
   <script>
-    window.addEventListener('load', async () => {
+    (async () => {
       if (typeof Clerk === 'undefined') {
-        console.error('ClerkJS did not load.');
+        document.getElementById('app').textContent = 'Clerk failed to load.';
         return;
       }
+      await Clerk.load();
 
-      try {
-        await Clerk.load();
-
-        // 👇 Handles the redirect from Google (OAuth) cleanly
-        if (window.location.href.includes('__clerk_status')) {
-          await Clerk.handleRedirectCallback();
-          // Redirect to auth.html again without the Clerk URL hash
-          window.history.replaceState({}, document.title, 'auth.html');
-        }
-
-        const app = document.getElementById('app');
-
-        if (Clerk.user) {
-          app.innerHTML = `
-            <div id="user-button"></div>
-            <button id="sign-out">Sign Out</button>
-          `;
-          Clerk.mountUserButton(document.getElementById('user-button'));
-
-          document.getElementById('sign-out').onclick = async () => {
-            await Clerk.signOut();
-            window.location.href = 'auth.html';
-          };
-
-          // Manual redirect after 1 sec
-          setTimeout(() => {
-            window.location.href = 'wall.html';
-          }, 1000);
-
-        } else {
-          app.innerHTML = `<div id="sign-in"></div>`;
-          Clerk.mountSignIn(document.getElementById('sign-in'), {
-            // This is KEY: we redirect back to this exact file!
-            redirectUrl: window.location.href
-          });
-        }
-      } catch (err) {
-        console.error('Clerk Auth Error:', err);
-        document.getElementById('app').innerHTML = 'Authentication failed. Please reload.';
+      // Handle OAuth callback (prevents default redirect)
+      if (window.location.search.includes('__clerk_status')) {
+        await Clerk.handleRedirectCallback();
+        // clean URL
+        window.history.replaceState({}, '', 'auth.html');
       }
-    });
+
+      const app = document.getElementById('app');
+      if (Clerk.user) {
+        // Signed in
+        app.innerHTML = `
+          <div id="user-button"></div>
+          <button id="sign-out">Sign Out</button>
+        `;
+        Clerk.mountUserButton(document.getElementById('user-button'));
+        document.getElementById('sign-out').onclick = async () => {
+          await Clerk.signOut();
+          window.location.href = 'auth.html';
+        };
+        // Redirect to wall.html on your GitHub Pages site
+        setTimeout(() => {
+          window.location.href = 'https://hunainsualeh.github.io/The-Cinematic-Canvas/wall.html';
+        }, 500);
+      } else {
+        // Not signed in
+        app.innerHTML = `<div id="sign-in"></div>`;
+        Clerk.mountSignIn(document.getElementById('sign-in'), {
+          // always bounce back here after OAuth
+          redirectUrl: 'https://hunainsualeh.github.io/The-Cinematic-Canvas/auth.html',
+          afterSignInUrl: 'https://hunainsualeh.github.io/The-Cinematic-Canvas/wall.html',
+          afterSignUpUrl: 'https://hunainsualeh.github.io/The-Cinematic-Canvas/wall.html'
+        });
+      }
+    })();
   </script>
 </body>
 </html>
