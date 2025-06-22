@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Cinematic Canvas</title>
+  <link rel="shortcut icon" href="https://cdn-icons-png.freepik.com/512/3112/3112568.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="Wall.css" />
+
+  <!-- Autography font -->
+  <style>
+    @font-face {
+      font-family: 'Autography';
+      src: url('Font/Autography.otf') format('opentype');
+    }
+
+    
+    #back-to-top {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #d9b8ff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 45px;
+      height: 45px;
+      font-size: 18px;
+      cursor: pointer;
+      display: none;
+      z-index: 9999;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      z-index: 9999;
+    }
+    .toast.show {
+      opacity: 1;
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script async type="text/javascript" crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" data-clerk-publishable-key="pk_test_ZHJpdmVuLXRlYWwtNjMuY2xlcmsuYWNjb3VudHMuZGV2JA"></script>
+  <script defer src="wall.js"></script>
+</head>
+
+<body>
+  <!-- Loader Overlay -->
+  
+
+  <!-- Back to Top -->
+  <button id="back-to-top" title="Back to Top"><i class="fas fa-arrow-up"></i></button>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden">Wallpaper saved to your gallery!</div>
+
+  <!-- Header -->
+  <header class="header">
+    <a href="index.html">
+    <h1><span class="the">The</span> Cinematic Canvas</h1></a>
+    
+    <div class="controls">
+      <input type="text" id="search-input" placeholder="Search..." />
+      <button id="search-btn" aria-label="Search"><i class="fas fa-search"></i></button>
+      <button id="mic-btn" title="Voice Search"><i class="fas fa-microphone"></i></button>
+      <button id="theme-toggle" title="My GitHub">
+  <a href="https://github.com/HunainSualeh" target="_blank" style="color: inherit; text-decoration: none;">
+    <i class="fab fa-github"></i>
+  </a>
+</button>
+
+    </div>
+    <div class="auth-controls">
+      <span id="user-info" class="user-info hidden">
+        <i class="fas fa-user"></i>
+        <span id="user-name">User</span>
+      </span>
+      <a href="auth.html"><button id="auth-btn">Sign In / Sign Up</button></a>
+      <button id="sign-out-btn" class="hidden">Sign Out</button>
+      <a href="fav.html"><button id="favorites-btn" class="hidden">My Favorites</button></a>
+    </div>
+    <nav class="categories">
+      <button class="category-btn" data-cat="nature">Nature</button>
+      <button class="category-btn" data-cat="city">City</button>
+      <button class="category-btn" data-cat="abstract">Abstract</button>
+      <button class="category-btn" data-cat="technology">Tech</button>
+      <button class="category-btn" data-cat="cars">Cars</button>
+      <button class="category-btn" data-cat="neon">Neon</button>
+      <button class="category-btn" data-cat="space">Space</button>
+      <button class="category-btn" data-cat="animals">Animals</button>
+      <button class="category-btn" data-cat="fashion">Fashion</button>
+      <button class="category-btn" data-cat="minimal">Minimal</button>
+      <button class="category-btn" data-cat="vintage">Vintage</button>
+      <button class="category-btn" data-cat="cinematic">Cinematic</button>
+      <button class="category-btn" data-cat="dark">Dark</button>
+      <button class="category-btn" data-cat="pastel">Pastel</button>
+      <button class="category-btn" data-cat="anime">Anime</button>
+      <button class="category-btn" data-cat="fantasy">Fantasy</button>
+    </nav>
+  </header>
+
+  <!-- Daily Spotlight -->
+  <section id="daily-spotlight" class="daily-spotlight"></section>
+
+  <!-- Gallery Section -->
+  <main id="gallery" class="gallery masonry"></main>
+  <div id="loader" class="loader hidden">Loading...</div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <p>Please sign in or sign up to add to favorites.</p>
+      <div class="modal-actions">
+        <button id="modal-confirm">Yes</button>
+        <button id="modal-cancel">No</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="lightbox" class="hidden">
+    <span id="lightbox-close">&times;</span>
+    <img id="lightbox-img" src="" alt="Expanded view">
+    <div id="lightbox-nav">
+      <button id="lightbox-prev">&larr;</button>
+      <button id="lightbox-next">&rarr;</button>
+    </div>
+  </div>
+
+  <!-- Wallpaper Template -->
+  <template id="wallpaper-template">
+    <div class="wallpaper-item">
+      <img src="" alt="Wallpaper" />
+      <div class="icon-bar">
+        <a href="" download class="icon download"><i class="fas fa-download"></i></a>
+        <button class="fav-btn"><i class="fas fa-heart"></i></button>
+      </div>
+      <div class="wallpaper-info">
+        <p><i class="fas fa-user"></i> Author: <span class="author-name"></span></p>
+        <p><i class="fas fa-thumbs-up"></i> Likes: <span class="likes-count"></span></p>
+        <p><i class="fas fa-expand"></i> Resolution: <span class="res-info"></span></p>
+      </div>
+    </div>
+  </template>
+
+  <!-- GSAP Signature Animation -->
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      const signature = document.querySelector(".signature-path");
+      gsap.to(signature, {
+        duration: 2.5,
+        opacity: 1,
+        ease: "power2.out",
+        onComplete: () => {
+          gsap.to("#signature-loader", {
+            opacity: 0,
+            delay: 1,
+            duration: 1,
+            pointerEvents: "none",
+            onComplete: () => {
+              document.getElementById("signature-loader").style.display = "none";
+            }
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
