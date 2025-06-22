@@ -35,9 +35,10 @@
     }
     #sign-out:hover { background:rgba(255,255,255,0.2); }
   </style>
+
+  <!-- ClerkJS SDK -->
   <script
-    async
-    crossorigin="anonymous"
+    async crossorigin="anonymous"
     src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
     data-clerk-publishable-key="pk_test_ZHJpdmVuLXRlYWwtNjMuY2xlcmsuYWNjb3VudHMuZGV2JA">
   </script>
@@ -54,35 +55,43 @@
       await Clerk.load();
 
       const url = new URL(window.location.href);
-      // handle both handshake and status callbacks
+
+      // 1) Handle OAuth callbacks from Clerk
       if (url.searchParams.has('__clerk_handshake') || url.searchParams.has('__clerk_status')) {
         try {
           await Clerk.handleRedirectCallback();
-        } catch (e) {
-          console.error('Callback error', e);
+        } catch (err) {
+          console.error('Clerk callback error', err);
         }
-        // clean URL
+        // Remove query params
         url.searchParams.delete('__clerk_handshake');
         url.searchParams.delete('__clerk_status');
         window.history.replaceState({}, '', url.pathname);
       }
 
       const app = document.getElementById('app');
+
       if (Clerk.user) {
-        // already signed in → go to wall.html
-        app.innerHTML = `<p>Signed in! Redirecting…</p>`;
+        // 2) If signed in, go straight to YOUR Wall.html
+        app.innerHTML = '<p>Signed in! Redirecting…</p>';
         setTimeout(() => {
-          window.location.href = 'https://hunainsualeh.github.io/The-Cinematic-Canvas/wall.html';
+          window.location.href = 'Wall.html';
         }, 200);
-      } else {
-        // show sign-in form
-        app.innerHTML = `<div id="sign-in"></div>`;
-        Clerk.mountSignIn(document.getElementById('sign-in'), {
-          redirectUrl: 'https://hunainsualeh.github.io/The-Cinematic-Canvas/auth.html',
-          afterSignInUrl: 'https://hunainsualeh.github.io/The-Cinematic-Canvas/wall.html',
-          afterSignUpUrl: 'https://hunainsualeh.github.io/The-Cinematic-Canvas/wall.html'
-        });
+        return;
       }
+
+      // 3) Otherwise, render the sign-in form
+      app.innerHTML = '<div id="sign-in"></div>';
+      Clerk.mountSignIn(
+        document.getElementById('sign-in'),
+        {
+          // must exactly match this GitHub Pages URL for auth.html
+          redirectUrl: 'https://hunainsualeh.github.io/The-Cinematic-Canvas/auth.html',
+          // after login or signup, send to the capital-W Wall.html
+          afterSignInUrl: 'Wall.html',
+          afterSignUpUrl: 'Wall.html'
+        }
+      );
     })();
   </script>
 </body>
