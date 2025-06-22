@@ -2,15 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Cinematic Canvas – Auth</title>
+  <title>Cinematic Canvas – Auth</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- Inline CSS for cinematic black + glassmorphism -->
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       height: 100vh;
       background-color: #000;
@@ -34,7 +29,6 @@
       align-items: center;
       gap: 1rem;
     }
-    /* Style Clerk’s mounted boxes to match glassmorphism theme */
     .cl-signInBox,
     .cl-userButtonBox {
       width: 100% !important;
@@ -47,7 +41,6 @@
     .cl-userButtonBox > div {
       padding: 1rem !important;
     }
-    /* Custom Sign Out button styling */
     #sign-out {
       margin-top: 1rem;
       padding: 0.75rem 1.5rem;
@@ -74,21 +67,24 @@
   </script>
 </head>
 <body>
-  <div id="app" class="auth-container"></div>
+  <div id="app" class="auth-container">Loading authentication...</div>
 
   <script>
     window.addEventListener('load', async () => {
-      // Initialize Clerk
       if (typeof Clerk === 'undefined') {
         console.error('ClerkJS did not load.');
         return;
       }
+
       await Clerk.load();
 
       const app = document.getElementById('app');
 
+      // 👇 Required on GitHub Pages to complete the OAuth flow (prevents 404)
+      await Clerk.handleRedirectCallback();
+
       if (Clerk.user) {
-        // User is signed in → show user button + Sign Out
+        // ✅ Signed in
         app.innerHTML = `
           <div id="user-button"></div>
           <button id="sign-out">Sign Out</button>
@@ -97,19 +93,19 @@
 
         document.getElementById('sign-out').onclick = async () => {
           await Clerk.signOut();
-          // reload to show sign-in form
-          window.location.reload();
+          window.location.href = 'auth.html'; // reload to show sign-in
         };
+
+        // 🔁 redirect to wall.html after sign-in
+        setTimeout(() => {
+          window.location.href = 'wall.html';
+        }, 1000);
       } else {
-        // Not signed in → show the Sign In form with redirects
-        app.innerHTML = '<div id="sign-in"></div>';
-        Clerk.mountSignIn(
-          document.getElementById('sign-in'),
-          {
-            afterSignInUrl: 'wall.html',
-            afterSignUpUrl: 'wall.html'
-          }
-        );
+        // Not signed in → Show Sign In box
+        app.innerHTML = `<div id="sign-in"></div>`;
+        Clerk.mountSignIn(document.getElementById('sign-in'), {
+          redirectUrl: 'auth.html', // 👈 Always redirect back to this page
+        });
       }
     });
   </script>
